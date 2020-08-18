@@ -10,6 +10,24 @@ from enum import Enum
 import math
 import re
 
+def isNumber(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+def isTrue(x):
+    if(abs(x)>=0.001):
+        return True
+    return False
+
+def fact(x):
+    if(x<=1):
+        return 1
+    return x * fact(x-1)
+
+
 class Node:
     def __init__(self):
         self.bIsVisited = False
@@ -31,7 +49,9 @@ class Literal(Node):
         
     def getValue(self):
         #super().getValue()
-        return self.value
+        if isNumber(self.value):
+            return float(self.value)
+        return self.value #not numeric value - for future implementations
         
 class Variable(Node):
     def __init__(self, expresssion, parentFormula): #, formula, expression = None):
@@ -62,18 +82,37 @@ class Name(Node):
         
 class Function(Node):
     functionsCreated = False
-    def __init__(self, ):
-        super(Function, self).__init__()
-        if not Function.functionsCreated:
-            Function.functionsCreated = True
-            Function.createFunctions()            
-        self.nodes = list() 
-        self.mnemonic = ""
         
+    def __init__(self, name = ""):
+        #if not functionsCreated:
+            #functionsCreated = True
+        #createFunctions()
+
+        #print("estou no construtor de Function")
+        super(Function, self).__init__()
+        #print("vou setar o name " + name)
+        self.name = name
+        #print("setei o name " + self.name)
+        
+        
+        self.nodes = list()
+        #self.name = ""        
+    
     def getValue(self):
         #super().getValue()
         #return None
-        pass
+        #pass
+        #print("vou buscar a funcao " + self.name)
+        
+        #the discovering of the function is lazy now. just in evaluation time:
+        theFuncion = Function.getFunctionByName(self.name)
+        if theFuncion is None:
+            raise Exception("Function \"" + self.name + "\" not found.")
+
+        for node in self.nodes:
+            theFuncion.nodes.append(node)
+            
+        return theFuncion.getValue()
 
     def setVisited(self, visited):
         super().setVisited(visited)
@@ -83,6 +122,7 @@ class Function(Node):
 #--------------------EXTERNAL FUNCTIONS------
     @staticmethod
     def createFunctions():
+        # if if hasattr(a, 'property') is not None:
         if Function.functionsCreated:
             return
 
@@ -110,16 +150,19 @@ class Function(Node):
         Function.functions["asin"] = Asin
         Function.functions["acos"] = Acos
         Function.functions["atan"] = Atan
+        Function.functions["and"] = And
+        Function.functions["or"] = Or
 
 #--------------------END OF EXTERNAL FUNCTIONS------
 
     @staticmethod
-    def getFunctionByMnemonic(mnemonic):
-        if mnemonic in Function.functions:
-            return Function.functions[mnemonic]()
+    def getFunctionByName(name):
+        if name in Function.functions:
+            return Function.functions[name](name) #instantiates tne function
         return None
     
-class Formula:
+class Formula:    
+    
     parentFormula = None
     def __init__(self, expression = ""):
 
@@ -159,13 +202,30 @@ class Formula:
 
     def findTuple(self, pos1, pos2):
         returnTuple = []
-        commas = list([m.start() for m in re.finditer(',', self.expression[pos1:pos2])])
-        k=0
+        levelParenthesis = 0
+
+        commas = []
+        for i in range(pos1, pos2):
+            if self.expression[i] == "(":
+                levelParenthesis += 1
+            if self.expression[i] == ")":
+                levelParenthesis -= 1
+            if self.expression[i] == "," and levelParenthesis == 0:
+                commas.append(i)
+
+        #commas = list([m.start() for m in re.finditer(',', self.expression[pos1:pos2])])
+        #k=0
+        #for comma in commas:
+            #returnTuple.append(self.compileNode(pos1+k, pos1+comma-1))
+            #k=comma+1
+        #if pos1!=pos2:
+            #returnTuple.append(self.compileNode(pos1+k, pos2-1))
+        k=pos1
         for comma in commas:
-            returnTuple.append(self.compileNode(pos1+k, pos1+comma-1))
+            returnTuple.append(self.compileNode(k, comma-1))
             k=comma+1
-        if pos1!=pos2:
-            returnTuple.append(self.compileNode(pos1+k, pos2-1))
+        if k!=pos2:
+            returnTuple.append(self.compileNode(k, pos2-1))
 
         #while j<=pos2:
         #    if self.expression[j] == ",":
@@ -213,7 +273,7 @@ class Formula:
                 #print("operador: " + self.expression[i+1:j+1])
                 
                 if self.expression[i+1:j+1] not in Operator.operators:
-                    raise Exception("Unknown operator " + self.expression[i+1:j+1])
+                    raise Exception("Unknown operator \"" + self.expression[i+1:j+1] + "\"")
 
                 operators = Operator.operators[self.expression[i+1:j+1]]
 
@@ -263,9 +323,10 @@ class Formula:
                 if Formula.isTermInitialSymbol(self.expression[pos1]):
                     if "(" in self.expression[pos1:pos2]:
                         k = self.expression[pos1:pos2].find("(")
-                        returnValue = Function.getFunctionByMnemonic(self.expression[pos1:k+pos1])
-                        if returnValue is None:
-                            raise Exception("Function " + self.expression[pos1:k+pos1] + " not found.")
+                        #returnValue = Function.getFunctionByName(self.expression[pos1:k+pos1])
+                        returnValue = Function(self.expression[pos1:k+pos1])
+                        # if returnValue is None:
+                            # raise Exception("Function \"" + self.expression[pos1:k+pos1] + "\" not found.")
                         if pos1+k < pos2-1:
                             parameters = self.findTuple(pos1+k+1, pos2)
                             for node in parameters:
@@ -305,7 +366,8 @@ class Formula:
                     #    else:
                     #        returnValue = Name(self.expression[pos1:k1+1], self.parentFormula)
                 else:
-                    returnValue=Literal(float(self.expression[pos1:pos2+1]))
+                    #returnValue=Literal(float(self.expression[pos1:pos2+1]))
+                    returnValue=Literal(self.expression[pos1:pos2+1])
 
         return returnValue
         
@@ -337,33 +399,20 @@ class Formula:
     def setVisited(self, visited):
         self.root.setVisited(visited)
 
-#--------------AUXILIARY FUNCTIONS--------------
-def isTrue(x):
-    if(abs(x)>=0.001):
-        return True
-    return False
-
-def fact(x):
-    if(x<=1):
-        return 1
-    return x * fact(x-1)
-
-#--------------END OF AUXILIARY FUNCTIONS--------------
-
 #----------------INTERNAL FUNCTIONS------------
 class IsTrue(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return isTrue(nodes[0])
     
 class Nop(Function): #no operation
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return self.nodes[0].getValue()
     
 class Sum(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         dblReturn = 0.0
         for node in self.nodes:
             dblReturn += node.getValue()
@@ -371,12 +420,12 @@ class Sum(Function):
 
 class Sub(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return self.nodes[0].getValue() - self.nodes[1].getValue()
 
 class Mul(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         dblReturn = 1.0
         for node in self.nodes:
             dblReturn *= node.getValue()
@@ -384,78 +433,106 @@ class Mul(Function):
 
 class Div(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return self.nodes[0].getValue() / self.nodes[1].getValue()
 
 class IntegerDiv(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return self.nodes[0].getValue() // self.nodes[1].getValue()
 
 class Mod(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return self.nodes[0].getValue() % self.nodes[1].getValue()
     
 class If(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         if isTrue(self.nodes[0].getValue()):
             return self.nodes[1].getValue()
         return self.nodes[2].getValue()
 
 class Neg(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return -self.nodes[0].getValue()
 
 class Pow(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return pow(self.nodes[0].getValue(), self.nodes[1].getValue())
 
 class E(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.e
 
 class Pi(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.pi
 
 class Fact(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return fact(self.nodes[0].getValue())
 
 class Equals(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         if(not isTrue(self.nodes[0].getValue() - self.nodes[1].getValue())):
             return 1.0
         return 0.0
 
 class NotEquals(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         if(isTrue(self.nodes[0].getValue() - self.nodes[1].getValue())):
+            return 1.0
+        return 0.0
+
+class Lt(Function):
+    def getValue(self):
+        #super().getValue()
+        if(self.nodes[0].getValue() < self.nodes[1].getValue()):
+            return 1.0
+        return 0.0
+
+class Gt(Function):
+    def getValue(self):
+        #super().getValue()
+        if(self.nodes[0].getValue() > self.nodes[1].getValue()):
+            return 1.0
+        return 0.0
+
+class Lte(Function):
+    def getValue(self):
+        #super().getValue()
+        if(self.nodes[0].getValue() <= self.nodes[1].getValue()):
+            return 1.0
+        return 0.0
+
+class Gte(Function):
+    def getValue(self):
+        #super().getValue()
+        if(self.nodes[0].getValue() >= self.nodes[1].getValue()):
             return 1.0
         return 0.0
 
 class Floor(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.floor(self.nodes[0].getValue())
 
 class Ceil(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.ceil(self.nodes[0].getValue())
 
 class Min(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         vet = []
         for node in self.nodes:
             vet.append(node.getValue())
@@ -463,7 +540,7 @@ class Min(Function):
 
 class Max(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         vet = []
         for node in self.nodes:
             vet.append(node.getValue())
@@ -471,17 +548,17 @@ class Max(Function):
 
 class Sqrt(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.sqrt(self.nodes[0].getValue())
 
 class Exp(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.exp(self.nodes[0].getValue())
 
 class Log(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         if len(self.nodes) == 2:
             return math.log(self.nodes[0].getValue(), self.nodes[1].getValue())
         else:
@@ -489,12 +566,12 @@ class Log(Function):
 
 class Trunc(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.trunc(self.nodes[0].getValue())
 
 class Round(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         if len(self.nodes) == 2:
             return round(self.nodes[0].getValue(), int(self.nodes[1].getValue()))
         else:
@@ -502,33 +579,51 @@ class Round(Function):
 
 class Sin(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.sin(self.nodes[0].getValue())
 
 class Cos(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.cos(self.nodes[0].getValue())
 
 class Tan(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.tan(self.nodes[0].getValue())
 
 class Asin(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.asin(self.nodes[0].getValue())
 
 class Acos(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.acos(self.nodes[0].getValue())
 
 class Atan(Function):
     def getValue(self):
-        super().getValue()
+        #super().getValue()
         return math.atan(self.nodes[0].getValue())
+
+class Not(Function):
+    def getValue(self):
+        return 0.0 if isTrue(self.nodes[0].getValue()) else 1.0
+
+class And(Function):
+    def getValue(self):
+        for node in self.nodes:
+            if not isTrue(node.getValue()):
+                return 0.0
+        return 1.0
+
+class Or(Function):
+    def getValue(self):
+        for node in self.nodes:
+            if isTrue(node.getValue()):
+                return 1.0
+        return 0.0
 
 #----------------END OF INTERNAL FUNCTIONS-----
 #----------------OPERATORS-----
@@ -569,6 +664,9 @@ class Operator:
         Operator.operators["-"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Sub, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
         Operator.operators["-"][Operator.POSITION_RIGHT] = (Operator(Neg, Operator.POSITION_RIGHT, 999))
 
+        Operator.operators["|"] = {}
+        Operator.operators["|"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Or, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
+
         Operator.operators["*"] = {}
         Operator.operators["*"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Mul, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 2))
 
@@ -581,6 +679,9 @@ class Operator:
         Operator.operators["%"] = {}
         Operator.operators["%"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Mod, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 2))
 
+        Operator.operators["&"] = {}
+        Operator.operators["&"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(And, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 2))
+
         Operator.operators["^"] = {}
         Operator.operators["^"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Pow, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 3))
 
@@ -589,15 +690,27 @@ class Operator:
 
         Operator.operators["!"] = {}
         Operator.operators["!"][Operator.POSITION_LEFT] = (Operator(Fact, Operator.POSITION_LEFT, 999))
+        Operator.operators["!"][Operator.POSITION_RIGHT] = (Operator(Not, Operator.POSITION_RIGHT, 999))
 
         Operator.operators["=="] = {}
         Operator.operators["=="][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Equals, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
+
+        Operator.operators["<"] = {}
+        Operator.operators["<"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Lt, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
+
+        Operator.operators[">"] = {}
+        Operator.operators[">"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Gt, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
+
+        Operator.operators["<="] = {}
+        Operator.operators["<="][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Lte, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
+
+        Operator.operators[">="] = {}
+        Operator.operators[">="][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(Gte, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
 
         Operator.operators["!="] = {}
         Operator.operators["!="][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(NotEquals, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
 
         Operator.operators["<>"] = {}
         Operator.operators["<>"][Operator.POSITION_LEFT + Operator.POSITION_RIGHT] = (Operator(NotEquals, Operator.POSITION_LEFT + Operator.POSITION_RIGHT, 1))
-
+        
 #----------------END OF OPERATORS-----
-    

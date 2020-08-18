@@ -37,32 +37,38 @@ import pyformula as pf
 #formula.unsetVariable("a")
 
 #Baskhara´s formula:
-#x1 = pf.Formula("(-b-sqrt(delta))/(2*a)")
-#x2 = pf.Formula("(-b+sqrt(delta))/(2*a)")
-#x1.setVariable("a","1")
-#x2.setVariable("a","1")
-#x1.setVariable("b","-5")
-#x2.setVariable("b","-5")
-#x1.setVariable("c","6")
-#x2.setVariable("c","6")
-#x1.setVariable("delta","b^2-4*a*c")
-#x2.setVariable("delta","b^2-4*a*c")
-#print(x1.getValue())
-#print(x2.getValue())
+x1 = pf.Formula("(-b-sqrt(delta))/(2*a)")
+x2 = pf.Formula("(-b+sqrt(delta))/(2*a)")
+x1.setVariable("a","1")
+x2.setVariable("a","1")
+x1.setVariable("b","-5")
+x2.setVariable("b","-5")
+x1.setVariable("c","6")
+x2.setVariable("c","6")
+x1.setVariable("delta","b^2-4*a*c")
+x2.setVariable("delta","b^2-4*a*c")
+print(x1.getValue())
+print(x2.getValue())
+
+#formula = pf.Formula("0|0|0|0|0")
+#print(formula.getValue())
 
 #formula = pf.Formula("(if(x<>0, 1/x, x))")
 #formula.setVariable("x","4")
 
-#Pyhtagora´s formula:
+#Pythagora´s formula:
 #formula = pf.Formula("sqrt(a^2+b^2)")
 #formula.setVariable("a","3")
 #formula.setVariable("b","4")
 
 #approximation of "e":
-formula = pf.Formula("(1+1/n)^n")
-formula.setVariable("n","100000")
+# formula = pf.Formula("(1+1/(n))^(n)")
+# formula.setVariable("n","100000")
 
-print(formula.getValue())
+
+# formula = pf.Formula("sum(2,3)")
+
+#print(formula.getValue())
 
 
 #print(formula.getValue())
