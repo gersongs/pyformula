@@ -1,5 +1,12 @@
 import pyformula as pf
 
+def callback_function(obj):
+   print("estou na callback_function. sou uma " + str(type(obj)) + ". meu nome eh: " + obj.name)
+
+#formula = pf.Formula("sqrt(9)", False, callback_function)
+#formula.compile()
+#print(formula.getValue())
+
 #formula = pf.Formula("pi(1)")
 #formula = pf.Formula("sum()") #,3)")
 #formula = pf.Formula("8\\3")
@@ -32,23 +39,28 @@ import pyformula as pf
 #formula.setVariable("c","81")
 #formula.setVariable("a","5")
 
+#callbacks = {}
+#callbacks["Function"] = callback_function
+#callbacks["Name"] = callback_name
 #print(formula.getValue())
 
 #formula.unsetVariable("a")
 
 #Baskhara´s formula:
-x1 = pf.Formula("(-b-sqrt(delta))/(2*a)")
-x2 = pf.Formula("(-b+sqrt(delta))/(2*a)")
-x1.setVariable("a","1")
-x2.setVariable("a","1")
-x1.setVariable("b","-5")
-x2.setVariable("b","-5")
-x1.setVariable("c","6")
-x2.setVariable("c","6")
-x1.setVariable("delta","b^2-4*a*c")
-x2.setVariable("delta","b^2-4*a*c")
-print(x1.getValue())
-print(x2.getValue())
+#x1 = pf.Formula("(-b-sqrt(delta))/(2*a)", False, callback_function)
+#x2 = pf.Formula("(-b+sqrt(delta))/(2*a)", False, callback_function)
+#x1.setVariable("a","1")
+#x2.setVariable("a","1")
+#x1.setVariable("b","-5")
+#x2.setVariable("b","-5")
+#x1.setVariable("c","6")
+#x2.setVariable("c","6")
+#x1.setVariable("delta","b^2-4*a*c")
+#x2.setVariable("delta","b^2-4*a*c")
+#print(x1.getValue())
+#print(x2.getValue())
+
+#x1.compile()
 
 #formula = pf.Formula("0|0|0|0|0")
 #print(formula.getValue())
@@ -62,13 +74,16 @@ print(x2.getValue())
 #formula.setVariable("b","4")
 
 #approximation of "e":
-# formula = pf.Formula("(1+1/(n))^(n)")
+#formula = pf.Formula("(1+1/(n))^(n)", False, callback_function)
 # formula.setVariable("n","100000")
+#formula.compile()
+#print(formula.print_tree())
 
 
 # formula = pf.Formula("sum(2,3)")
 
-#print(formula.getValue())
+# formula = pf.Formula("2*pi()")
+# print(formula.getValue())
 
 
 #print(formula.getValue())
