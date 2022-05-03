@@ -9,6 +9,7 @@
 from enum import Enum
 import math
 import re
+import os.path
 
 def isNumber(s):
     try:
@@ -52,6 +53,7 @@ class Node:
         self.bIsVisited = False
         self.nodes = list()
         self.name = ""
+        self.the_completeName = ""
         self.theFormula = parentFormula
         
     def __eq__(self, other):
@@ -60,7 +62,25 @@ class Node:
         return False
         
     def completeName(self):
-        return self.name
+        self.the_completeName = "" #for reset the complete name in case of reorganizing the nodes
+
+        if len(self.nodes) == 0:
+            return self.name
+
+        if self.the_completeName != "":
+            return self.the_completeName
+
+        self.the_completeName = self.name + "("
+        
+        if len(self.nodes) != 0:
+            self.the_completeName += self.nodes[0].completeName()
+            
+        for i in range(1, len(self.nodes)):
+            self.the_completeName += "," + self.nodes[i].completeName()
+
+        self.the_completeName += ")"
+
+        return self.the_completeName
         
     def getValue(self):
         if(self.bIsVisited):
@@ -160,19 +180,6 @@ class Function(Node):
             return True
         
         return False
-
-    def completeName(self):
-        strReturn = self.name + "("
-        
-        if len(self.nodes) != 0:
-            strReturn += self.nodes[0].completeName()
-            
-        for i in range(1, len(self.nodes)):
-            strReturn += ", " + self.nodes[i].completeName()
-
-        strReturn += ")"
-
-        return strReturn
     
     def getValue(self):
         #super().getValue()
@@ -245,6 +252,9 @@ class Function(Node):
         Function.functions["and"] = And
         Function.functions["or"] = Or        
         Function.functions["implication"] = Implication
+        Function.functions["variable"] = VariableDefinition
+        Function.functions["define"] = Definition
+        Function.functions["concatenate"] = Concatenation
 
 
 #--------------------END OF EXTERNAL FUNCTIONS------
@@ -257,15 +267,28 @@ class Function(Node):
     
 class Formula:
     
+    special_symbols = ["!", "@", "#", "$", "%", "&", "*", "-", "+", "=", "/", "\\", "|", "^", "~", "?", "<", ">", ":", ";"]
+    
     parentFormula = None
 
-    def __init__(self, expression = "", autoCompile = False, callback_function = None):
+    def __init__(self, expression = "", autoCompile = False, callback_function = None, operators = None):
     
         self.callback = None
 
         Function.createFunctions()
-        Operator.createOperators()  
-        
+
+        if operators is not None:
+            if type(operators) is str:
+                self.def_file = None
+                if def_file is not None:
+                    self.def_file = operators
+
+                Operator.createOperators(self.def_file)
+            else:
+                Operator.setOperators(operators)
+        else:
+            Operator.createOperators()
+            
         self.expression = expression.replace(" ","")
         self.variables = {}
         self.root = None
@@ -282,8 +305,42 @@ class Formula:
         if isinstance(other, Formula):
             return self.expression == other.expression
         return False
+
+
+    def replace_symbol(self, old_symbol, new_symbol, node = None):
+
+        if self.root is None:
+            return
+
+        if node is None:
+            node = self.root
+            if self.root.name == old_symbol:
+                if isinstance(new_symbol, str):
+                    self.root = Formula(new_symbol, True).root
+                else:
+                    self.root = new_symbol
+
+        if node is None:
+            return
+        if len(node.nodes) == 0:
+            return
+
+        i = 0
+        while i < len(node.nodes):
+            if node.nodes[i].name == old_symbol:
+                if isinstance(new_symbol, str):
+                    node.nodes[i] = Formula(new_symbol, True).root
+                else:
+                    node.nodes[i] = new_symbol
+            else:
+                self.replace_symbol(old_symbol, new_symbol, node.nodes[i])
+
+            i += 1
         
     def print_tree(self, node = None, depth = 0, stackTemp = []):
+        if not self.isCompiled:
+            self.compile()
+            
         strSaida = ""
         strIdent = ""
         
@@ -391,7 +448,7 @@ class Formula:
         return returnList
 
     def isSpecialSymbol(s):
-        if s in ["!", "@", "#", "$", "%", "&", "*", "-", "+", "=", "/", "\\", "|", "^", "~", "?", "<", ">", ":"]:
+        if s in Formula.special_symbols:
             return True
         return False
 
@@ -607,6 +664,8 @@ class Formula:
     def setVisited(self, visited):
         self.root.setVisited(visited)
         
+    def setOperators(oprs):
+        Operator.setOperators(oprs)
 
 
 #----------------INTERNAL FUNCTIONS------------
@@ -848,6 +907,18 @@ class Implication(Function):
             return 0.0
         return 1.0
 
+class VariableDefinition(Function):
+    def getValue(self):        
+        return 1.0
+
+class Definition(Function):
+    def getValue(self):        
+        return 1.0
+        
+class Concatenation(Function):
+    def getValue(self):        
+        return 1.0
+
 #----------------END OF INTERNAL FUNCTIONS-----
 #----------------OPERATORS-----
 class Operator:
@@ -857,37 +928,54 @@ class Operator:
 
     def __init__(self, implementingFunction, termsPosition, priority):
         if not Operator.operatorsCreated:
-            operatorsCreated = True
-            Operator.createOperators()            
+            Operator.operatorsCreated = True
+            Operator.createOperators()
 
         self.termsPosition = termsPosition
         self.implementingFunction = implementingFunction
         self.priority = priority
         
+    def setOperators(oprs):
+        Operator.operators = oprs
+        Operator.operatorsCreated = True
         
     def readOperators(filename):
         f = open(filename, "r")
-        Operator.operators = {}
+        dic_temp = {}
+        
+        i = -1
         
         for line in f:
+            i += 1
+
+            if i == 0: #head
+                continue
             #vet = line.split(";")
             vet = re.split(r'\t+', line)
             symbol = vet[0]
             positions = int(vet[1])
             function = vet[2]
             priority = int(vet[3])
-            if symbol not in Operator.operators:
-                Operator.operators[symbol] = {}
-            Operator.operators[symbol][positions] = Operator(function, positions, priority)
+            if symbol not in dic_temp:
+                dic_temp[symbol] = {}
+            dic_temp[symbol][positions] = Operator(function, positions, priority)
+            
         f.close()
+        Operator.setOperators(dic_temp)
 
-    def createOperators():
+    def createOperators(def_file = None):
         if Operator.operatorsCreated:
             return
 
         Operator.operatorsCreated = True
+
+        if def_file is not None:
+            path = def_file
+        else:
+            path = "operators.txt"
         
-        Operator.readOperators("operators.txt")
+        if os.path.isfile(path):
+            Operator.readOperators(path)
         
         return
 
