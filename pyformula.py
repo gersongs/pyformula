@@ -267,28 +267,18 @@ class Function(Node):
     
 class Formula:
     
-    special_symbols = ["!", "@", "#", "$", "%", "&", "*", "-", "+", "=", "/", "\\", "|", "^", "~", "?", "<", ">", ":", ";"]
+    special_symbols = set(["!", "@", "#", "$", "%", "&", "*", "-", "+", "=", "/", "\\", "|", "^", "~", "?", "<", ">", ":", ";"])
     
     parentFormula = None
 
-    def __init__(self, expression = "", autoCompile = False, callback_function = None, operators = None):
+    def __init__(self, expression = "", autoCompile = False, callback_function = None):
+        
+        Operator(None, None, None) #just to invoke the static constructor of Operator class
     
         self.callback = None
 
         Function.createFunctions()
-
-        if operators is not None:
-            if type(operators) is str:
-                self.def_file = None
-                if def_file is not None:
-                    self.def_file = operators
-
-                Operator.createOperators(self.def_file)
-            else:
-                Operator.setOperators(operators)
-        else:
-            Operator.createOperators()
-            
+      
         self.expression = expression.replace(" ","")
         self.variables = {}
         self.root = None
@@ -299,6 +289,10 @@ class Formula:
             
         if callback_function is not None:
             self.callback = callback_function
+            
+    def set_expression(self, new_expression):
+        self.expression = new_expression.replace(" ","")
+        self.isCompiled = False
         
     def __eq__(self, other):
         """Overrides the default implementation"""
@@ -920,7 +914,16 @@ class Concatenation(Function):
         return 1.0
 
 #----------------END OF INTERNAL FUNCTIONS-----
+
 #----------------OPERATORS-----
+#The operatros are stored in a dictionary of dictionary. The first index is the symbol of the operator.
+#The secont is the position of terms (left, right or both), that depends on if the operation is unary or not and the position of the terms.
+#For example, the symbol "-" can represent the unary operator "-", like in "-2" or the binary operator "-", like in "3-2". In the
+#first example, "-" is a RIGHT operator , because the operand is in the right. In the second example, the operator has it operands
+# in both left and right of the operator symbol.
+#Operator.POSITION_LEFT and Operator.POSITION_RIGHT are integers that are used as bit vectors (1 is the rightmost bit and 2 is the second bit).
+        
+
 class Operator:
     POSITION_LEFT = 2
     POSITION_RIGHT = 1
@@ -929,7 +932,7 @@ class Operator:
     def __init__(self, implementingFunction, termsPosition, priority):
         if not Operator.operatorsCreated:
             Operator.operatorsCreated = True
-            Operator.createOperators()
+            Operator.createDefaultOperators()
 
         self.termsPosition = termsPosition
         self.implementingFunction = implementingFunction
@@ -939,7 +942,55 @@ class Operator:
         Operator.operators = oprs
         Operator.operatorsCreated = True
         
-    def readOperators(filename):
+    def createDefaultOperators():
+
+        lines=[
+        "->	3	implication	1",
+        "==	3	equals	2",
+        "<	3	lt	2",
+        ">	3	gt	2",
+        "<=	3	lte	2",
+        ">=	3	gte	2",
+        "!=	3	notequals	2",
+        "<>	3	notequals	2",
+        "+	3	sum	5",
+        "-	3	sub	5",
+        "*	3	mul	10",
+        "/	3	div	10",
+        "\	3	integerdiv	10",
+        "%	3	mod	10",
+        "|	3	or	14",
+        "&	3	and	15",
+        "^	3	pow	20",
+        "**	3	pow	20",
+        "+	1	unaryplus	999",
+        "-	1	neg	999",
+        "!	1	not	999",
+        "!	2	fact	1000"
+        ]
+
+        dic_temp = {}
+        
+        for line in lines:
+            [symbol, operator] = Operator.readOperatorFromInputLine(line)
+
+            if symbol not in dic_temp:
+                dic_temp[symbol] = {}
+            dic_temp[symbol][operator.termsPosition] = operator
+
+        Operator.setOperators(dic_temp)
+        
+    
+    def readOperatorFromInputLine(line):
+        vet = re.split(r'\t+', line)
+        symbol = vet[0]
+        positions = int(vet[1])
+        function = vet[2]
+        priority = int(vet[3])
+        return symbol, Operator(function, positions, priority)
+        
+        
+    def readOperatorsFromFile(filename):
         f = open(filename, "r")
         dic_temp = {}
         
@@ -950,40 +1001,13 @@ class Operator:
 
             if i == 0: #head
                 continue
-            #vet = line.split(";")
-            vet = re.split(r'\t+', line)
-            symbol = vet[0]
-            positions = int(vet[1])
-            function = vet[2]
-            priority = int(vet[3])
+            
+            [symbol, operator] = Operator.readOperatorFromInputLine(line)
+
             if symbol not in dic_temp:
                 dic_temp[symbol] = {}
-            dic_temp[symbol][positions] = Operator(function, positions, priority)
+            dic_temp[symbol][operator.termsPosition] = operator
             
         f.close()
         Operator.setOperators(dic_temp)
 
-    def createOperators(def_file = None):
-        if Operator.operatorsCreated:
-            return
-
-        Operator.operatorsCreated = True
-
-        if def_file is not None:
-            path = def_file
-        else:
-            path = "operators.txt"
-        
-        if os.path.isfile(path):
-            Operator.readOperators(path)
-        
-        return
-
-        #Dictionary of dictionary. The first index is the symbol of the operator.
-        #The secont is the position of terms (left, right or both), that depends on if the operation is unary or not and the position of the terms.
-        #For example, the symbol "-" can represent the unary operator "-", like in "-2" or the binary operator "-", like in "3-2". In the
-        #first example, "-" is a RIGHT operator , because the operand is in the right. In the second example, the operator has it operands
-        # in both left and right of the operator symbol.
-        #Operator.POSITION_LEFT and Operator.POSITION_RIGHT are integers that are used as bit vectors (1 is the rightmost bit and 2 is the second bit).
-        
-        #----------------END OF OPERATORS-----
