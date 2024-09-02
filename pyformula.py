@@ -10,6 +10,7 @@ from enum import Enum
 import math
 import re
 import os.path
+import sys
 
 def isNumber(s):
     try:
@@ -22,6 +23,9 @@ def isTrue(x):
     if(abs(x)>=0.001):
         return True
     return False
+
+def isFalse(x):
+    return not isTrue(x)
 
 def fact(x):
     if(x<=1):
@@ -47,6 +51,23 @@ class Stack:
         if len(self.vet) == 0:
             return None
         return self.vet[len(self.vet)-1]
+
+class OperatorMatch():
+    
+    def __init__(self):
+        self.begin = -1
+        self.end = -1
+        self.operator = None
+
+class MultiOperator():
+    
+    def __init__(self, expression):
+        self.expression = expression
+        
+    def get_matches(self):
+        result = []
+        for str_operator in Operator.operators.keys():
+            pass
 
 class Node:
     def __init__(self, parentFormula = None):
@@ -252,6 +273,7 @@ class Function(Node):
         Function.functions["and"] = And
         Function.functions["or"] = Or        
         Function.functions["implication"] = Implication
+        Function.functions["double_implication"] = DoubleImplication
         Function.functions["variable"] = VariableDefinition
         Function.functions["define"] = Definition
         Function.functions["concatenate"] = Concatenation
@@ -523,8 +545,23 @@ class Formula:
 
                 #print("operador: " + self.expression[i+1:j+1])
                 
-                if self.expression[i+1:j+1] not in Operator.operators:
-                    raise Exception("Unknown operator \"" + self.expression[i+1:j+1] + "\"")
+                if self.expression[i+1:j+1] not in Operator.operators.keys():
+                    
+                    b_found = False
+                    
+                    #The substring is nos a simple operator. We need to detect the operator within the expression.
+                    str_operators = self.expression[i+1:j+1]
+                    
+                    for str_operator in Operator.operators.keys():
+                        index_str_operator = str_operators.find(str_operator)
+                        if index_str_operator >= 0:
+                            b_found = True
+                            i += index_str_operator
+                            j = i + len(str_operator)
+                            break
+                                
+                    if not b_found:
+                        raise Exception("Unknown operator \"" + self.expression[i+1:j+1] + "\"")
 
                 operators = Operator.operators[self.expression[i+1:j+1]]
 
@@ -895,11 +932,24 @@ class Or(Function):
         
 class Implication(Function):
     def getValue(self):
-        if isTrue(node[1].getValue()):
+        if isTrue(self.nodes[1].getValue()):
             return 1.0
-        if isTrue(node[0].getValue()):
+        if isTrue(self.nodes[0].getValue()):
             return 0.0
         return 1.0
+    
+class DoubleImplication(Function):
+    def getValue(self):       
+        a = self.nodes[0].getValue()
+        b = self.nodes[1].getValue()
+        
+        if isTrue(a) & isTrue(b):
+            return 1.0
+        
+        if isFalse(a) & isFalse(b):
+            return 1.0     
+
+        return 0.0
 
 class VariableDefinition(Function):
     def getValue(self):        
@@ -946,6 +996,7 @@ class Operator:
 
         lines=[
         "->	3	implication	1",
+        "<->	3	double_implication	1",
         "==	3	equals	2",
         "<	3	lt	2",
         ">	3	gt	2",
