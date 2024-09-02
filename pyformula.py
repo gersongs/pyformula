@@ -52,22 +52,6 @@ class Stack:
             return None
         return self.vet[len(self.vet)-1]
 
-class OperatorMatch():
-    
-    def __init__(self):
-        self.begin = -1
-        self.end = -1
-        self.operator = None
-
-class MultiOperator():
-    
-    def __init__(self, expression):
-        self.expression = expression
-        
-    def get_matches(self):
-        result = []
-        for str_operator in Operator.operators.keys():
-            pass
 
 class Node:
     def __init__(self, parentFormula = None):
