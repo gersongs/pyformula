@@ -67,7 +67,7 @@ class Node:
         return False
         
     def completeName(self):
-        self.the_completeName = "" #for reset the complete name in case of reorganizing the nodes
+        self.the_completeName = "" #reseting the complete name in case of reorganizing the nodes
 
         if len(self.nodes) == 0:
             return self.name
@@ -262,7 +262,6 @@ class Function(Node):
         Function.functions["define"] = Definition
         Function.functions["concatenate"] = Concatenation
 
-
 #--------------------END OF EXTERNAL FUNCTIONS------
 
     @staticmethod
@@ -279,7 +278,7 @@ class Formula:
 
     def __init__(self, expression = "", autoCompile = False, callback_function = None):
         
-        Operator(None, None, None) #just to invoke the static constructor of Operator class
+        Operator(None, None, None, None) #just to invoke the static constructor of Operator class
     
         self.callback = None
 
@@ -306,6 +305,11 @@ class Formula:
             return self.expression == other.expression
         return False
 
+    def completeName(self):
+        if not self.isCompiled:
+            self.compile()
+    
+        return self.root.completeName()
 
     def replace_symbol(self, old_symbol, new_symbol, node = None):
 
@@ -381,7 +385,9 @@ class Formula:
         return strSaida
         
     def prepare_traversal(self):
-        self.compile()
+        if not self.isCompiled:
+            self.compile()
+            
         self.currentNode = self.root
         self.stackNodes = Stack()
         self.stackOrdinals = Stack()
@@ -536,12 +542,12 @@ class Formula:
                     #The substring is nos a simple operator. We need to detect the operator within the expression.
                     str_operators = self.expression[i+1:j+1]
                     
-                    for str_operator in Operator.operators.keys():
-                        index_str_operator = str_operators.find(str_operator)
+                    for op_temp in Operator.get_operators_by_priority():# Operator.operators.keys():
+                        index_str_operator = str_operators.find(op_temp.symbol)
                         if index_str_operator >= 0:
                             b_found = True
                             i += index_str_operator
-                            j = i + len(str_operator)
+                            j = i + len(op_temp.symbol)
                             break
                                 
                     if not b_found:
@@ -576,6 +582,8 @@ class Formula:
                     opInit=i+1
                     opEnd=j
                     j = opInit
+                else:
+                    j = i# - 1
 
             j-=1
 
@@ -963,18 +971,21 @@ class Operator:
     POSITION_RIGHT = 1
     operatorsCreated = False
 
-    def __init__(self, implementingFunction, termsPosition, priority):
+    def __init__(self, symbol, implementingFunction, termsPosition, priority):
         if not Operator.operatorsCreated:
             Operator.operatorsCreated = True
             Operator.createDefaultOperators()
 
+        self.symbol = symbol
         self.termsPosition = termsPosition
         self.implementingFunction = implementingFunction
         self.priority = priority
         
     def setOperators(oprs):
         Operator.operators = oprs
-        Operator.operatorsCreated = True
+        #Operator.operatorsCreated = True
+        
+        Operator.index_operators()
         
     def createDefaultOperators():
 
@@ -1022,7 +1033,7 @@ class Operator:
         positions = int(vet[1])
         function = vet[2]
         priority = int(vet[3])
-        return symbol, Operator(function, positions, priority)
+        return symbol, Operator(symbol, function, positions, priority)
         
         
     def readOperatorsFromFile(filename):
@@ -1045,4 +1056,21 @@ class Operator:
             
         f.close()
         Operator.setOperators(dic_temp)
+
+
+    def index_operators():
+        
+        Operator.list_priority_asc = []
+        
+        for value1 in Operator.operators.values():
+            for value2 in value1.values():
+                Operator.list_priority_asc.append(value2)
+                
+        Operator.list_priority_asc.sort(key=lambda x: x.priority, reverse=False)
+        
+    def get_operators_by_priority():
+        return Operator.list_priority_asc
+                
+        pass
+        
 

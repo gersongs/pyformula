@@ -79,12 +79,29 @@ def callback_function(obj):
 #formula.compile()
 #print(formula.print_tree())
 
-
 # formula = pf.Formula("sum(2,3)")
 
 # formula = pf.Formula("2*pi()")
 # print(formula.getValue())
 
+#print(pf.Formula("(4+5)^2").getValue())
+#print(pf.Formula("6/2*(2+1)").getValue())
+
+#formula = pf.Formula("3^2+((15-(3-sqrt(1))^2)*(7+(sqrt(100)/sqrt(25))^2))*2")
+#formula = pf.Formula("2*sqrt(3)-1/3^(1/2)")
+
+# formula = pf.Formula("F<->F")
+# formula.setVariable("T", "1")
+# formula.setVariable("F", "0")
+
+formula = pf.Formula("a+b+c+d+e+f+g+h+i+j")
+print(formula.expression)
+print(formula.completeName())
+print(formula.print_tree())
 
 #print(formula.getValue())
 #print(formula.getVariables())
+
+#formula = pf.Formula("(x,y)")
+#formula.compile()
+#print(formula.print_tree())
