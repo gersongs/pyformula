@@ -73,7 +73,7 @@ Logical operators are also implemented:
 >>> formula.getValue()
 1.0
 
-Variable substitutions can be done. Call the replace_symbol functions to see a canonical form of the formula.
+Variable substitutions can be done. Call the completeName functions to see a canonical form of the formula.
 >>> formula = pf.Formula("Mortal(x)")
 >>> formula.completeName()
 'Mortal(x)'
