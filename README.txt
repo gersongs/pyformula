@@ -84,8 +84,8 @@ Variable substitutions can be done. Call the completeName functions to see a can
 From the above example we can see the Pyformula can parse a formula even if 
 a function in the formula is not defined (function Mortal() in the example).
 
-Once the formula is defined, we can call the print_tree function to print 
-friendly a execution tree of the formula, even if there is a undefined variable:
+Once the formula is defined, we can call the print_tree function to friendly print 
+a execution tree of the formula, even if there is a undefined variable:
 >>> formula = pf.Formula("a+b/c^d")
 >>> print(formula.print_tree())
 sum
@@ -107,8 +107,8 @@ pow
  |   |->b
  |->2
  
-The most important feature of Pyformula is to define, in run time, a operator, through 
-reading a file:
+The most important feature of Pyformula is to define, at run time, a operator, through 
+the reading of a file:
 >>> pf.Operator.readOperatorsFromFile("operators.txt")
 
 Here is an example of an operators file:
@@ -143,9 +143,9 @@ The operator file is a ascii file of tab-separated columns. The first line is ig
 - Second column (operands_left_or_right): a number (1, 2 or 3) that defines if the operator have one or two operands and, 
 if it has only one operand, whether it is on the left or on the right.
 The  column is interpreted as a bit map, in the following way:
-If the operator has only a left operand, the left bit is set to 1:						10
-If the operator has only a right operand, the left bit is set to 1:						01
-If the operator has a left and a right operand, a bitwise "or" is done from 10 and 01:	11
+If the operator has only a left operand, the left bit is set to 1:							10
+If the operator has only a right operand, the left bit is set to 1:							01
+If the operator has a left and a right operand, a bitwise "or" is done from 10 and 01:		11
 
 - Third column (function): the internal name of the implementing function of the operator.
 
